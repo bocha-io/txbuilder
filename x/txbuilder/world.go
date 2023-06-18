@@ -7,6 +7,7 @@ import (
 
 	"github.com/bocha-io/garnet/x/logger"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 type AbiStruct []struct {
@@ -54,4 +55,20 @@ func NewWorldABI(contract []byte) abi.ABI {
 		panic("error decoding IWorld abi")
 	}
 	return abiDecoded
+}
+
+// This is needed when encoding the params to interact with a contract
+func StringToSlice(stringID string) ([32]byte, error) {
+	id, err := hexutil.Decode(stringID)
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("error decoding the string %s", err.Error())
+	}
+
+	if len(id) != 32 {
+		return [32]byte{}, fmt.Errorf("invalid length")
+	}
+
+	var idArray [32]byte
+	copy(idArray[:], id)
+	return idArray, nil
 }
