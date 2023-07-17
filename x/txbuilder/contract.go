@@ -19,10 +19,10 @@ func (t *TxBuilder) SendTransaction(address common.Address, privateKey *ecdsa.Pr
 	}
 
 	v, ok := t.currentNonce[address.Hash().Hex()]
-	nonce:= uint64(0)
+	nonce := uint64(0)
 	if ok {
 		nonce = v
-	}else{
+	} else {
 		nonce, err = client.PendingNonceAt(context.Background(), address)
 		if err != nil {
 			return common.Hash{}, err
