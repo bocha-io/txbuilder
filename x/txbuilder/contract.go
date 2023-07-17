@@ -18,9 +18,15 @@ func (t *TxBuilder) SendTransaction(address common.Address, privateKey *ecdsa.Pr
 		return common.Hash{}, err
 	}
 
-	nonce, err := client.PendingNonceAt(context.Background(), address)
-	if err != nil {
-		return common.Hash{}, err
+	v, ok := t.currentNonce[address.Hash().Hex()]
+	nonce:= uint64(0)
+	if ok {
+		nonce = v
+	}else{
+		nonce, err = client.PendingNonceAt(context.Background(), address)
+		if err != nil {
+			return common.Hash{}, err
+		}
 	}
 
 	value := big.NewInt(0)
@@ -44,6 +50,7 @@ func (t *TxBuilder) SendTransaction(address common.Address, privateKey *ecdsa.Pr
 	}
 
 	tx := types.NewTransaction(nonce, t.worldAddress, value, gasLimit, gasPrice, data)
+	logger.LogDebug(fmt.Sprintf("[backend] creating tx (%s) with nonce: %d", message, nonce))
 
 	chainID, err := client.NetworkID(context.Background())
 	if err != nil {
@@ -59,6 +66,8 @@ func (t *TxBuilder) SendTransaction(address common.Address, privateKey *ecdsa.Pr
 	if err != nil {
 		return common.Hash{}, err
 	}
+
+	t.currentNonce[address.Hash().Hex()] = nonce + 1
 
 	logger.LogDebug(fmt.Sprintf("[backend] tx sent (%s) with hash: %s", message, signedTx.Hash().Hex()))
 

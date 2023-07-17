@@ -19,6 +19,8 @@ type TxBuilder struct {
 	defaultGasLimit uint64
 
 	faucetPrivKey *ecdsa.PrivateKey
+
+	currentNonce map[string]uint64
 }
 
 func NexTxBuilder(
@@ -38,6 +40,7 @@ func NexTxBuilder(
 		customGasLimit:  customGasLimit,
 		defaultGasLimit: defaultGasLimit,
 		faucetPrivKey:   faucetPrivKey,
+		currentNonce:    map[string]uint64{},
 	}
 }
 
