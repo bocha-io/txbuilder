@@ -3,7 +3,7 @@ module github.com/bocha-io/txbuilder
 go 1.20
 
 require (
-	github.com/bocha-io/garnet v0.0.0-20230618150007-5825f4cf3266
+	github.com/bocha-io/logger v0.0.0-20230722133508-fbef5d720b58
 	github.com/ethereum/go-ethereum v1.12.0
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.1
 )
