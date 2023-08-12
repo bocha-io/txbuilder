@@ -7,15 +7,26 @@ import (
 	"math/big"
 
 	"github.com/bocha-io/logger"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func (t *TxBuilder) SendTransaction(address common.Address, privateKey *ecdsa.PrivateKey, message string, args ...interface{}) (common.Hash, error) {
+func (t *TxBuilder) SendTransaction(contractName string, address common.Address, privateKey *ecdsa.PrivateKey, message string, args ...interface{}) (common.Hash, error) {
 	client, err := ethclient.Dial(t.endpoint)
 	if err != nil {
 		return common.Hash{}, err
+	}
+
+	var contractABI abi.ABI
+	var contractAddress common.Address
+	if v, ok := t.contracts[contractName]; ok {
+		contractABI = v.ABI
+		contractAddress = v.address
+
+	} else {
+		return common.Hash{}, fmt.Errorf("invalid contract name")
 	}
 
 	v, ok := t.currentNonce[address.Hash().Hex()]
@@ -38,18 +49,18 @@ func (t *TxBuilder) SendTransaction(address common.Address, privateKey *ecdsa.Pr
 
 	var data []byte
 	if len(args) > 0 {
-		data, err = t.worldABI.Pack(message, args...)
+		data, err = contractABI.Pack(message, args...)
 		if err != nil {
 			return common.Hash{}, err
 		}
 	} else {
-		data, err = t.worldABI.Pack(message)
+		data, err = contractABI.Pack(message)
 		if err != nil {
 			return common.Hash{}, err
 		}
 	}
 
-	tx := types.NewTransaction(nonce, t.worldAddress, value, gasLimit, gasPrice, data)
+	tx := types.NewTransaction(nonce, contractAddress, value, gasLimit, gasPrice, data)
 	logger.LogDebug(fmt.Sprintf("[backend] creating tx (%s) with nonce: %d", message, nonce))
 
 	chainID, err := client.NetworkID(context.Background())
