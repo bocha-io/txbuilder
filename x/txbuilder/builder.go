@@ -55,6 +55,7 @@ func NexTxBuilder(
 func (t *TxBuilder) InteractWithContract(
 	contractName string,
 	accountID int,
+	value *big.Int,
 	message string,
 	args ...interface{},
 ) (common.Hash, error) {
@@ -68,7 +69,7 @@ func (t *TxBuilder) InteractWithContract(
 		return common.Hash{}, err
 	}
 
-	return t.SendTransaction(contractName, account.Address, privateKey, message, args...)
+	return t.SendTransaction(contractName, account.Address, privateKey, value, message, args...)
 }
 
 func (t *TxBuilder) FundAnAccount(accountID int) (common.Hash, error) {

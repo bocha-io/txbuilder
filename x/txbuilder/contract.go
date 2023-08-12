@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func (t *TxBuilder) SendTransaction(contractName string, address common.Address, privateKey *ecdsa.PrivateKey, message string, args ...interface{}) (common.Hash, error) {
+func (t *TxBuilder) SendTransaction(contractName string, address common.Address, privateKey *ecdsa.PrivateKey, value *big.Int, message string, args ...interface{}) (common.Hash, error) {
 	client, err := ethclient.Dial(t.endpoint)
 	if err != nil {
 		return common.Hash{}, err
@@ -40,7 +40,6 @@ func (t *TxBuilder) SendTransaction(contractName string, address common.Address,
 		}
 	}
 
-	value := big.NewInt(0)
 	gasLimit := t.GetGasLimit(message)
 	gasPrice, err := client.SuggestGasPrice(context.Background())
 	if err != nil {
