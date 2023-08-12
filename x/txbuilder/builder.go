@@ -8,12 +8,22 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-type TxBuilder struct {
-	worldAddress common.Address
-	worldABI     abi.ABI
+type Contract struct {
+	address common.Address
+	ABI     abi.ABI
+}
 
-	endpoint string
-	mnemonic string
+func NewContract(address string, abi abi.ABI) Contract {
+	return Contract{
+		address: common.HexToAddress(address),
+		ABI:     abi,
+	}
+}
+
+type TxBuilder struct {
+	contracts map[string]Contract
+	endpoint  string
+	mnemonic  string
 
 	customGasLimit  map[string]uint64
 	defaultGasLimit uint64
@@ -24,8 +34,7 @@ type TxBuilder struct {
 }
 
 func NexTxBuilder(
-	worldAddress string,
-	worldABI abi.ABI,
+	contracts map[string]Contract,
 	endpoint string,
 	mnemonic string,
 	customGasLimit map[string]uint64,
@@ -33,8 +42,7 @@ func NexTxBuilder(
 	faucetPrivKey *ecdsa.PrivateKey,
 ) *TxBuilder {
 	return &TxBuilder{
-		worldAddress:    common.HexToAddress(worldAddress),
-		worldABI:        worldABI,
+		contracts:       contracts,
 		endpoint:        endpoint,
 		mnemonic:        mnemonic,
 		customGasLimit:  customGasLimit,
@@ -45,6 +53,7 @@ func NexTxBuilder(
 }
 
 func (t *TxBuilder) InteractWithContract(
+	contractName string,
 	accountID int,
 	message string,
 	args ...interface{},
@@ -59,10 +68,10 @@ func (t *TxBuilder) InteractWithContract(
 		return common.Hash{}, err
 	}
 
-	return t.SendTransaction(account.Address, privateKey, message, args...)
+	return t.SendTransaction(contractName, account.Address, privateKey, message, args...)
 }
 
-func (t *TxBuilder) FoundAccount(accountID int) (common.Hash, error) {
+func (t *TxBuilder) FundAnAccount(accountID int) (common.Hash, error) {
 	_, account, err := GetWallet(t.mnemonic, accountID)
 	if err != nil {
 		return common.Hash{}, err
