@@ -3,6 +3,7 @@ package txbuilder
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -33,6 +34,21 @@ func (t *TxBuilder) WasTransactionSuccessful(hash common.Hash) (bool, error) {
 		return false, err
 	}
 	return receipt.Status == types.ReceiptStatusSuccessful, nil
+}
+
+func (t *TxBuilder) WasTxIncludedAndSuccessful(hash common.Hash) (bool, error) {
+	retry := t.txCheckRetry
+	for retry > 0 {
+		res, err := t.WasTransactionSuccessful(hash)
+		if err != nil {
+			time.Sleep(t.txCheckWaitTime)
+			retry--
+			continue
+		}
+		return res, nil
+	}
+
+	return false, fmt.Errorf("checking tx timedout")
 }
 
 func GetWallet(mnemonic string, accountID int) (*hdwallet.Wallet, accounts.Account, error) {

@@ -3,6 +3,7 @@ package txbuilder
 import (
 	"crypto/ecdsa"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -31,6 +32,9 @@ type TxBuilder struct {
 	faucetPrivKey *ecdsa.PrivateKey
 
 	currentNonce map[string]uint64
+
+	txCheckRetry    uint32
+	txCheckWaitTime time.Duration
 }
 
 func NexTxBuilder(
@@ -49,7 +53,18 @@ func NexTxBuilder(
 		defaultGasLimit: defaultGasLimit,
 		faucetPrivKey:   faucetPrivKey,
 		currentNonce:    map[string]uint64{},
+
+		txCheckRetry:    10,
+		txCheckWaitTime: time.Second,
 	}
+}
+
+func (t *TxBuilder) SetTxCheckRetry(value uint32) {
+	t.txCheckRetry = value
+}
+
+func (t *TxBuilder) SetTxCheckWaitTime(value time.Duration) {
+	t.txCheckWaitTime = value
 }
 
 func (t *TxBuilder) InteractWithContract(
