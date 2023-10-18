@@ -1,7 +1,6 @@
 package txbuilder
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
@@ -10,43 +9,31 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 func (t *TxBuilder) SendTransaction(contractName string, address common.Address, privateKey *ecdsa.PrivateKey, value *big.Int, message string, args ...interface{}) (common.Hash, error) {
-	client, err := ethclient.Dial(t.endpoint)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
 	var contractABI abi.ABI
 	var contractAddress common.Address
 	if v, ok := t.contracts[contractName]; ok {
 		contractABI = v.ABI
 		contractAddress = v.address
-
 	} else {
 		return common.Hash{}, fmt.Errorf("invalid contract name")
 	}
 
-	v, ok := t.currentNonce[address.Hash().Hex()]
+	v, ok := t.currentNonce[address.Hex()]
 	nonce := uint64(0)
 	if ok {
 		nonce = v
 	} else {
-		nonce, err = client.PendingNonceAt(context.Background(), address)
-		if err != nil {
-			return common.Hash{}, err
-		}
+		nonce = t.rpcClient.PendingNonceAt(address)
 	}
 
 	gasLimit := t.GetGasLimit(message)
-	gasPrice, err := client.SuggestGasPrice(context.Background())
-	if err != nil {
-		return common.Hash{}, err
-	}
+	gasPrice := t.rpcClient.SuggestGasPrice()
 
 	var data []byte
+	var err error
 	if len(args) > 0 {
 		data, err = contractABI.Pack(message, args...)
 		if err != nil {
@@ -62,22 +49,16 @@ func (t *TxBuilder) SendTransaction(contractName string, address common.Address,
 	tx := types.NewTransaction(nonce, contractAddress, value, gasLimit, gasPrice, data)
 	logger.LogDebug(fmt.Sprintf("[backend] creating tx (%s) with nonce: %d", message, nonce))
 
-	chainID, err := client.NetworkID(context.Background())
-	if err != nil {
-		return common.Hash{}, err
-	}
+	chainID := t.rpcClient.NetworkID()
 
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	err = client.SendTransaction(context.Background(), signedTx)
-	if err != nil {
-		return common.Hash{}, err
-	}
+	t.rpcClient.SendTransaction(signedTx)
 
-	t.currentNonce[address.Hash().Hex()] = nonce + 1
+	t.currentNonce[address.Hex()] = nonce + 1
 
 	logger.LogDebug(fmt.Sprintf("[backend] tx sent (%s) with hash: %s", message, signedTx.Hash().Hex()))
 

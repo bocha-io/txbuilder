@@ -1,7 +1,6 @@
 package txbuilder
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
@@ -10,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 var PrivateKeysAnvil = [3]*ecdsa.PrivateKey{}
@@ -22,48 +20,31 @@ func init() {
 }
 
 func (t *TxBuilder) CallFaucet(addr string, amount *big.Int) (common.Hash, error) {
-	client, err := ethclient.Dial(t.endpoint)
-	if err != nil {
-		return [32]byte{}, err
-	}
-
 	publicKey := t.faucetPrivKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
-		return [32]byte{}, err
+		return [32]byte{}, fmt.Errorf("invalid private key")
 	}
 
 	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
-	if err != nil {
-		return [32]byte{}, err
-	}
+	nonce := t.rpcClient.PendingNonceAt(fromAddress)
 
 	value := amount
 	gasLimit := uint64(100000)
-	gasPrice, err := client.SuggestGasPrice(context.Background())
-	if err != nil {
-		return [32]byte{}, err
-	}
+	gasPrice := t.rpcClient.SuggestGasPrice()
 
 	toAddress := common.HexToAddress(addr)
 	var data []byte
 	tx := types.NewTransaction(nonce, toAddress, value, gasLimit, gasPrice, data)
 
-	chainID, err := client.NetworkID(context.Background())
-	if err != nil {
-		return [32]byte{}, err
-	}
+	chainID := t.rpcClient.NetworkID()
 
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), t.faucetPrivKey)
 	if err != nil {
 		return [32]byte{}, err
 	}
 
-	err = client.SendTransaction(context.Background(), signedTx)
-	if err != nil {
-		return [32]byte{}, err
-	}
+	t.rpcClient.SendTransaction(signedTx)
 
 	logger.LogDebug(fmt.Sprintf("[backend] faucet tx sent with hash: %s", signedTx.Hash().Hex()))
 
