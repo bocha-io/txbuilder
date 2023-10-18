@@ -1,10 +1,12 @@
 package txbuilder
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"math/big"
 	"time"
 
+	"github.com/bocha-io/ethclient/x/ethclient"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -23,7 +25,6 @@ func NewContract(address string, abi abi.ABI) Contract {
 
 type TxBuilder struct {
 	contracts map[string]Contract
-	endpoint  string
 	mnemonic  string
 
 	customGasLimit  map[string]uint64
@@ -35,6 +36,8 @@ type TxBuilder struct {
 
 	txCheckRetry    uint32
 	txCheckWaitTime time.Duration
+
+	rpcClient *ethclient.EthClient
 }
 
 func NexTxBuilder(
@@ -47,7 +50,6 @@ func NexTxBuilder(
 ) *TxBuilder {
 	return &TxBuilder{
 		contracts:       contracts,
-		endpoint:        endpoint,
 		mnemonic:        mnemonic,
 		customGasLimit:  customGasLimit,
 		defaultGasLimit: defaultGasLimit,
@@ -56,6 +58,31 @@ func NexTxBuilder(
 
 		txCheckRetry:    10,
 		txCheckWaitTime: time.Second,
+
+		rpcClient: ethclient.NewClient(context.Background(), endpoint, 5),
+	}
+}
+
+func NexTxBuilderWithClient(
+	contracts map[string]Contract,
+	rpcClient *ethclient.EthClient,
+	mnemonic string,
+	customGasLimit map[string]uint64,
+	defaultGasLimit uint64,
+	faucetPrivKey *ecdsa.PrivateKey,
+) *TxBuilder {
+	return &TxBuilder{
+		contracts:       contracts,
+		mnemonic:        mnemonic,
+		customGasLimit:  customGasLimit,
+		defaultGasLimit: defaultGasLimit,
+		faucetPrivKey:   faucetPrivKey,
+		currentNonce:    map[string]uint64{},
+
+		txCheckRetry:    10,
+		txCheckWaitTime: time.Second,
+
+		rpcClient: rpcClient,
 	}
 }
 
